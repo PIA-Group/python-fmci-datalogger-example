@@ -27,7 +27,7 @@ $ git clone https://github.com/PIA-Group/python-fmci-datalogger-example.git
 ## Example
 ~~~python
 
-Run FMCIlogger.py
+python /path/to/FMCIlogger.py
 ~~~
 
 Example of the data file
