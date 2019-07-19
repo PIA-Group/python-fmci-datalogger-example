@@ -90,7 +90,7 @@ if __name__ == '__main__':
             l = f.decode('utf-8').split(',')
             if len(l) == 2:  # Ensures it is GSR data
                 if l[0] not in known_ids:
-                    known_ids = createFMCIfile(DATETIME, t0, known_ids, f)
+                    known_ids = createFMCIfile(SAVEDIR, DATETIME, t0, known_ids, f)
                 data = open(SAVEDIR + '_FMCI' + '_' + str(l[0]) + '.txt','a')
                 data.write(str(np.round(time.time() - t0, 3)) + '\t' + str(l[1][:-2]))
                 data.write('\n')
