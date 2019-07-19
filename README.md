@@ -25,9 +25,20 @@ Installation can be easily done with the `Clone or Download` button above:
 $ git clone https://github.com/PIA-Group/python-fmci-datalogger-example.git
 ```
 ## Example
+
+Specify the USB input Port or the directory to save the data files.
+~~~python
+
+python /path/to/FMCIlogger.py -i Device_USB_PORT -o save/file/dir
+
+~~~
+
+Or simply run the program in default mode.
+
 ~~~python
 
 python /path/to/FMCIlogger.py
+
 ~~~
 
 Example of the data file
