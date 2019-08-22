@@ -98,6 +98,7 @@ if __name__ == '__main__':
             else:
                 datalog = open(SAVEDIR + '_FMCI_LOG.txt', 'a')
                 datalog.write(str(np.round(time.time() - t0, 3)) + '\t' + str(l))
+                datalog.write('\n')
                 datalog.close()
     finally:
         port.close()
