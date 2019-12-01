@@ -2,7 +2,7 @@
 """
 Connects to the serial port, that is in contact with the FMCI device
 Receives its information and stores it in a txt file, with three columns
-    Time since the acquisition began 
+    Time since the acquisition began
     GSR value at the time
 Stores errors in a txt file
 
@@ -82,6 +82,8 @@ if __name__ == '__main__':
         port = serial.Serial(PORT, BAUDRATE)
         port.flushInput()
         t0 = createlogfile(SAVEDIR, DATETIME)
+        while time.time() - t0 <= 1:  # wait 1s to flush data
+            port.readline()
         f = port.readline()
         known_ids = createFMCIfile(SAVEDIR, DATETIME, t0, known_ids, f)
         while 1:
@@ -102,6 +104,3 @@ if __name__ == '__main__':
                 datalog.close()
     finally:
         port.close()
-
-    
-
