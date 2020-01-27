@@ -15,6 +15,7 @@ import numpy as np
 from datetime import datetime
 import serial.tools.list_ports as sr
 import sys
+import threading
 
 # Variables declaration
 DATETIME = datetime.now()
@@ -70,6 +71,17 @@ def get_port():
             PORT = portsCOM[0]
     return PORT
 
+# designed to be called as a thread
+def signal_user_input(t0):
+    while 1:
+        user_input = input("Enter Flags")
+        print("Received input: " + str(user_input))
+        data = open(SAVEDIR + '_flags.txt', 'a')
+        data.write(str(np.round(time.time() - t0, 3)) + '\t' + str(user_input))
+        data.write('\n')
+        data.close()
+    # thread exits here
+
 
 if __name__ == '__main__':
     if '-o' in sys.argv[1:]:  # Get directory to save file
@@ -77,11 +89,17 @@ if __name__ == '__main__':
         SAVEDIR = str(sys.argv[SAVEDIR_IDX]) + str(DATETIME)
     else:
         SAVEDIR = str(DATETIME)
+
     PORT = get_port()
+    data = open(SAVEDIR + '_flags.txt', 'w')
+    data.write('# Timestamp\t' + 'Flag' + '\n')
+    data.close()
     try:
         port = serial.Serial(PORT, BAUDRATE)
         port.flushInput()
         t0 = createlogfile(SAVEDIR, DATETIME)
+        threading.Thread(target=signal_user_input, args=(t0,), daemon=True).start()
+
         while time.time() - t0 <= 1:  # wait 1s to flush data
             port.readline()
         f = port.readline()
