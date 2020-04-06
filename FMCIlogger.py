@@ -16,6 +16,9 @@ from datetime import datetime
 import serial.tools.list_ports as sr
 import sys
 import threading
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+
 
 # Variables declaration
 DATETIME = datetime.now()
@@ -29,20 +32,36 @@ def createlogfile(SAVEDIR, DATETIME):
     t0=time.time()
     f=port.readline()
     l=f.decode('utf-8').split(',')
-    datalog=open(SAVEDIR + '_FMCI_LOG.txt', 'w')
+    file_name = SAVEDIR + '_FMCI_LOG.txt'
+    datalog=open(file_name, 'w')
     datalog.write('# Timestamp\t' + 'Log' + '\n')
-    datalog.write(str(np.round(time.time() - t0, 3)) + '\t' + l[0][2:-2])
+    data_content = str(np.round(time.time() - t0, 3)) + '\t' + l[0][2:-2]
+    datalog.write(data_content)
     datalog.close()
     f=port.readline()
+
+    file1 = drive.CreateFile({'parents': [{'kind': 'drive#fileLink', 'id': '1QOFkJKHhg-10dsUZhW2xgNXbgjjuW01-'}]})
+    file1['title'] = str(file_name)  # Change title of the file.
+    file1.SetContentString(data_content)
+    file1.Upload()
+
     return t0
 
 
 def createFMCIfile(SAVEDIR, DATETIME, t0, known_ids, f):
     l=f.decode('utf-8').split(',')
     known_ids.append(l[0])
-    data = open(SAVEDIR + '_FMCI' + '_' + str(known_ids[-1]) + '.txt', 'w')
-    data.write('# Timestamp\t' + 'GSR\t' + 'TIMESTAMP REAL:' + str(t0) + '\n')
+    file_name = SAVEDIR + '_FMCI' + '_' + str(known_ids[-1]) + '.txt'
+    data = open(file_name, 'w')
+    data_content = '# Timestamp\t' + 'GSR\t' + 'TIMESTAMP REAL:' + str(t0) + '\n'
+    data.write(data_content)
     data.close()
+
+    file1 = drive.CreateFile({'parents': [{'kind': 'drive#fileLink', 'id': '1QOFkJKHhg-10dsUZhW2xgNXbgjjuW01-'}]})
+    file1['title'] = str(file_name)  # Change title of the file.
+    file1.SetContentString(data_content)
+    file1.Upload()
+
     return known_ids
 
 
@@ -83,7 +102,20 @@ def signal_user_input(t0):
     # thread exits here
 
 
+def upd_GDfile(files_list, file_name, data):
+    for file in files_list: # iterate over files in e-sharedt folder
+        if file['title'] == file_name: # if file exists, apend data to it
+            updated_content = file.GetContentString() + "\n" + data + "\n"
+            file.SetContentString(updated_content)
+            file.Upload()
+            break
+
+
 if __name__ == '__main__':
+    gauth=GoogleAuth()
+    drive = GoogleDrive(gauth) # Create GoogleDrive instance with authenticated GoogleAuth instance
+
+    # Auto-iterate through all files in the root folder.
     if '-o' in sys.argv[1:]:  # Get directory to save file
         SAVEDIR_IDX = sys.argv.index('-o') + 1
         SAVEDIR = str(sys.argv[SAVEDIR_IDX]) + str(DATETIME)
@@ -98,7 +130,7 @@ if __name__ == '__main__':
         port = serial.Serial(PORT, BAUDRATE)
         port.flushInput()
         t0 = createlogfile(SAVEDIR, DATETIME)
-        threading.Thread(target=signal_user_input, args=(t0,), daemon=True).start()
+        #threading.Thread(target=signal_user_input, args=(t0,)).start()
 
         while time.time() - t0 <= 1:  # wait 1s to flush data
             port.readline()
@@ -108,17 +140,30 @@ if __name__ == '__main__':
             f = port.readline()
             print('Raw input: ', f)
             l = f.decode('utf-8').split(',')
+            files_list = drive.ListFile({'q': "'1QOFkJKHhg-10dsUZhW2xgNXbgjjuW01-' in parents and trashed=false"}).GetList()
+
             if len(l) == 2:  # Ensures it is GSR data
                 if l[0] not in known_ids:
                     known_ids = createFMCIfile(SAVEDIR, DATETIME, t0, known_ids, f)
-                data = open(SAVEDIR + '_FMCI' + '_' + str(l[0]) + '.txt','a')
-                data.write(str(np.round(time.time() - t0, 3)) + '\t' + str(l[1][:-2]))
+                file_name = SAVEDIR + '_FMCI' + '_' + str(l[0]) + '.txt'
+                data_content = str(np.round(time.time() - t0, 3)) + '\t' + str(l[1][:-2])
+                data = open(file_name,'a')
+                data.write(data_content)
                 data.write('\n')
                 data.close()
+                upd_GDfile(files_list, file_name, data_content)
             else:
-                datalog = open(SAVEDIR + '_FMCI_LOG.txt', 'a')
-                datalog.write(str(np.round(time.time() - t0, 3)) + '\t' + str(l))
+                file_name = SAVEDIR + '_FMCI_LOG.txt'
+                datalog = open(file_name, 'a')
+                data_content = str(np.round(time.time() - t0, 3)) + '\t' + str(l)
+                datalog.write(data_content)
                 datalog.write('\n')
                 datalog.close()
+                for file in files_list: # iterate over files in e-sharedt folder
+                    if file['title'] == file_name: # if file exists, apend data to it
+                        updated_content = file.GetContentString() + "\n" + data_content + "\n"
+                        file.SetContentString(updated_content)
+                        file.Upload()
+                        break
     finally:
         port.close()
